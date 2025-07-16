@@ -3,11 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>רישום משתמש חדש</title>
-
-  <!-- ✅ Firebase v8 כדי למנוע בעיות מודולים -->
+  <!-- ✅ Firebase v8 יציב -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-
   <style>
     body {
       font-family: "Alef", Arial, sans-serif;
@@ -111,15 +109,16 @@
         <option value="מפקד">מפקד</option>
       </select>
 
-      <div id="recaptcha-container"></div>
+      <!-- ✅ כאן נטען reCAPTCHA -->
+      <div id="recaptcha-container" style="margin:15px 0;"></div>
+
       <button onclick="sendSMS()">שלח קוד SMS</button>
     </div>
 
     <!-- שלב 2: קוד SMS -->
     <div class="step" id="step-2">
       <p style="text-align:center; font-weight:bold; color:#1976d2;">
-        ✅ קוד נשלח לטלפון שלך.  
-        הזן אותו כאן:
+        ✅ קוד נשלח לטלפון שלך.<br>הזן אותו כאן:
       </p>
       <label>קוד SMS שהתקבל:</label>
       <input type="text" id="sms-code" placeholder="123456">
@@ -140,37 +139,45 @@
 
   <script>
     // ✅ Firebase config שלך
-    var firebaseConfig = {
+    const firebaseConfig = {
       apiKey: "AIzaSyCQQS1iKvwoKI1kUVJ7ZKADNZRV6uSEp0k",
       authDomain: "shahad-attendence.firebaseapp.com",
       projectId: "shahad-attendence",
       appId: "1:820133478494:web:e2a0cb17c7e01e600df4cf"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
 
-    var auth = firebase.auth();
     const sheetUrl = "https://script.google.com/macros/s/AKfycbx7jo9uo7DWtOl7aTbsDdB9TtLg6IK69IwcWNxHhgH52AQE7dAYrBbpUpJYeYq_fyqATw/exec";
-
     let confirmationResult;
     let verifiedUser = null;
+    let recaptchaVerifier;
 
-    // החלפת שלבים
+    // ✅ נטען את ה-reCAPTCHA פעם אחת בלבד כשהדף נטען
+    window.onload = function() {
+      recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+        size: 'normal'
+      });
+      recaptchaVerifier.render();
+    }
+
+    // פונקציה להחלפת שלבים
     function showStep(stepNumber) {
       document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
       document.getElementById(`step-${stepNumber}`).classList.add('active');
     }
 
-    // המרת מספר רגיל ל+972
+    // נרמול מספר ישראלי ל+972
     function normalizePhone(phone) {
-      phone = phone.replace(/\D/g, '');
+      phone = phone.replace(/\D/g, ''); // מסיר כל מה שלא ספרה
       if (phone.startsWith("0")) {
         return "+972" + phone.substring(1);
       }
       return phone;
     }
 
-    // שליחת SMS
-    function sendSMS() {
+    // ✅ שליחת SMS
+    async function sendSMS() {
       const rawPhone = document.getElementById("phone").value.trim();
       const phone = normalizePhone(rawPhone);
       const name = document.getElementById("name").value.trim();
@@ -184,58 +191,54 @@
         return;
       }
 
-      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'normal' });
-
-      auth.signInWithPhoneNumber(phone, window.recaptchaVerifier)
-        .then(function(result) {
-          confirmationResult = result;
-          showStep(2);
-        })
-        .catch(function(error) {
-          alert("❌ שגיאה בשליחת SMS: " + error.message);
-        });
+      try {
+        confirmationResult = await auth.signInWithPhoneNumber(phone, recaptchaVerifier);
+        showStep(2); // מעבר לשלב 2
+      } catch (error) {
+        alert("❌ שגיאה בשליחת SMS: " + error.message);
+      }
     }
 
-    // אימות קוד ה-SMS
-    function verifyCode() {
+    // ✅ אימות קוד ה-SMS
+    async function verifyCode() {
       const code = document.getElementById("sms-code").value.trim();
-      confirmationResult.confirm(code)
-        .then(function(result) {
-          verifiedUser = result.user;
-          showStep(3);
-        })
-        .catch(function(error) {
-          alert("❌ קוד שגוי: " + error.message);
-        });
+      try {
+        const result = await confirmationResult.confirm(code);
+        verifiedUser = result.user; // שמירת UID + מספר טלפון מאומת
+        showStep(3); // מעבר לשלב 3
+      } catch (error) {
+        alert("❌ קוד שגוי: " + error.message);
+      }
     }
 
-    // התחברות עם Google
-    function signInGoogle() {
+    // ✅ התחברות עם Google אחרי אימות SMS
+    async function signInGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then(async function(result) {
-          const googleUser = result.user;
-          const payload = {
-            uid: verifiedUser.uid,
-            name: document.getElementById("name").value.trim(),
-            phone: verifiedUser.phoneNumber,
-            branch: document.getElementById("branch").value,
-            role: document.getElementById("role").value,
-            googleEmail: googleUser.email
-          };
+      try {
+        const result = await auth.signInWithPopup(provider);
+        const googleUser = result.user;
 
-          await fetch(sheetUrl, {
-            method: "POST",
-            body: JSON.stringify(payload),
-            headers: { "Content-Type": "application/json" }
-          });
+        const payload = {
+          uid: verifiedUser.uid,
+          name: document.getElementById("name").value.trim(),
+          phone: verifiedUser.phoneNumber,
+          branch: document.getElementById("branch").value,
+          role: document.getElementById("role").value,
+          googleEmail: googleUser.email
+        };
 
-          alert("✅ נרשמת בהצלחה למערכת!");
-          window.location.reload();
-        })
-        .catch(function(error) {
-          alert("❌ שגיאה בהתחברות Google: " + error.message);
+        await fetch(sheetUrl, {
+          method: "POST",
+          body: JSON.stringify(payload),
+          headers: { "Content-Type": "application/json" }
         });
+
+        alert("✅ נרשמת בהצלחה למערכת!");
+        window.location.reload();
+
+      } catch (error) {
+        alert("❌ שגיאה בהתחברות Google: " + error.message);
+      }
     }
   </script>
 </body>
