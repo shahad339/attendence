@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>רישום משתמש חדש</title>
   <!-- ✅ Firebase v8 יציב -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <style>
@@ -17,17 +18,18 @@
     }
     .container {
       background: #fff;
+      width: 90%;
       max-width: 420px;
-      margin: 50px auto;
-      padding: 30px;
+      margin: 40px auto;
+      padding: 20px;
       border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      transition: all 0.3s ease;
     }
     h2 {
       text-align: center;
       color: #1976d2;
       margin-bottom: 20px;
+      font-size: 1.4em;
     }
     label {
       font-weight: bold;
@@ -37,11 +39,12 @@
     input, select {
       margin: 6px 0 15px;
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       border: 1px solid #ccc;
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 16px;
       transition: 0.3s;
+      box-sizing: border-box;
     }
     input:focus, select:focus {
       border-color: #1976d2;
@@ -50,7 +53,7 @@
     }
     button {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       font-size: 16px;
       background: #1976d2;
       color: #fff;
@@ -80,6 +83,14 @@
       text-align: center;
       margin-top: 10px;
     }
+    .resend-btn {
+      background: #ff9800;
+      margin-top: 10px;
+    }
+    .disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -92,7 +103,7 @@
       <input type="text" id="name" placeholder="הקלד את שמך המלא">
 
       <label>מספר טלפון:</label>
-      <input type="text" id="phone" placeholder="למשל 0556647360">
+      <input type="tel" id="phone" placeholder="למשל 0556647360" inputmode="numeric">
 
       <label>בחר גף:</label>
       <select id="branch">
@@ -121,8 +132,10 @@
         ✅ קוד נשלח לטלפון שלך.<br>הזן אותו כאן:
       </p>
       <label>קוד SMS שהתקבל:</label>
-      <input type="text" id="sms-code" placeholder="123456">
+      <input type="text" id="sms-code" placeholder="123456" inputmode="numeric">
       <button onclick="verifyCode()">אשר קוד והמשך</button>
+      <button class="resend-btn disabled" id="resendBtn" onclick="resendCode()" disabled>שלח קוד מחדש</button>
+      <p id="timer" style="text-align:center; color:#999; margin-top:8px;"></p>
     </div>
 
     <!-- שלב 3: התחברות עם Google -->
@@ -152,8 +165,8 @@
     let confirmationResult;
     let verifiedUser = null;
     let recaptchaVerifier;
+    let countdownTimer;
 
-    // ✅ נטען את ה-reCAPTCHA פעם אחת בלבד כשהדף נטען
     window.onload = function() {
       recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
         size: 'normal'
@@ -161,28 +174,26 @@
       recaptchaVerifier.render();
     }
 
-    // פונקציה להחלפת שלבים
     function showStep(stepNumber) {
       document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
       document.getElementById(`step-${stepNumber}`).classList.add('active');
     }
 
-    // נרמול מספר ישראלי ל+972
     function normalizePhone(phone) {
-      phone = phone.replace(/\D/g, ''); // מסיר כל מה שלא ספרה
+      phone = phone.replace(/\D/g, '');
       if (phone.startsWith("0")) {
         return "+972" + phone.substring(1);
       }
       return phone;
     }
 
-    // ✅ שליחת SMS
+    // שליחת SMS
     async function sendSMS() {
       const rawPhone = document.getElementById("phone").value.trim();
       const phone = normalizePhone(rawPhone);
       const name = document.getElementById("name").value.trim();
 
-      if (name === "") {
+      if (!name) {
         alert("אנא מלא שם מלא");
         return;
       }
@@ -193,25 +204,53 @@
 
       try {
         confirmationResult = await auth.signInWithPhoneNumber(phone, recaptchaVerifier);
-        showStep(2); // מעבר לשלב 2
+        showStep(2);
+        startResendTimer();
       } catch (error) {
         alert("❌ שגיאה בשליחת SMS: " + error.message);
       }
     }
 
-    // ✅ אימות קוד ה-SMS
+    // התחלת טיימר 30 שניות
+    function startResendTimer() {
+      let timeLeft = 30;
+      const resendBtn = document.getElementById("resendBtn");
+      const timerText = document.getElementById("timer");
+
+      resendBtn.classList.add("disabled");
+      resendBtn.disabled = true;
+      timerText.innerText = `ניתן לשלוח קוד חוזר בעוד ${timeLeft} שניות`;
+
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        timeLeft--;
+        timerText.innerText = `ניתן לשלוח קוד חוזר בעוד ${timeLeft} שניות`;
+
+        if (timeLeft <= 0) {
+          clearInterval(countdownTimer);
+          timerText.innerText = "";
+          resendBtn.classList.remove("disabled");
+          resendBtn.disabled = false;
+        }
+      }, 1000);
+    }
+
+    async function resendCode() {
+      alert("מנסה לשלוח קוד חדש...");
+      sendSMS(); // שליחה חוזרת
+    }
+
     async function verifyCode() {
       const code = document.getElementById("sms-code").value.trim();
       try {
         const result = await confirmationResult.confirm(code);
-        verifiedUser = result.user; // שמירת UID + מספר טלפון מאומת
-        showStep(3); // מעבר לשלב 3
+        verifiedUser = result.user;
+        showStep(3);
       } catch (error) {
         alert("❌ קוד שגוי: " + error.message);
       }
     }
 
-    // ✅ התחברות עם Google אחרי אימות SMS
     async function signInGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
       try {
