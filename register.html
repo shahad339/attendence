@@ -16,45 +16,51 @@
       margin: 0;
       padding: 0;
     }
+
     .container {
       background: #fff;
-      width: 90%;
+      width: 95%;         /* כמעט מלא במסכים קטנים */
       max-width: 420px;
-      margin: 40px auto;
+      margin: 20px auto;  /* פחות מרווח עליון */
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
+
     h2 {
       text-align: center;
       color: #1976d2;
-      margin-bottom: 20px;
-      font-size: 1.4em;
+      margin-bottom: 15px;
+      font-size: 1.6em;
     }
+
     label {
       font-weight: bold;
       margin-top: 10px;
       display: block;
     }
+
     input, select {
       margin: 6px 0 15px;
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       border: 1px solid #ccc;
       border-radius: 6px;
-      font-size: 16px;
+      font-size: 18px;
       transition: 0.3s;
       box-sizing: border-box;
     }
+
     input:focus, select:focus {
       border-color: #1976d2;
       outline: none;
       box-shadow: 0 0 5px rgba(25,118,210,0.3);
     }
+
     button {
       width: 100%;
-      padding: 14px;
-      font-size: 16px;
+      padding: 16px;
+      font-size: 18px;
       background: #1976d2;
       color: #fff;
       border: none;
@@ -63,9 +69,11 @@
       transition: background 0.3s;
       margin-top: 10px;
     }
+
     button:hover {
       background: #1565c0;
     }
+
     .step {
       display: none;
       animation: fadeIn 0.5s;
@@ -73,23 +81,44 @@
     .step.active {
       display: block;
     }
+
     @keyframes fadeIn {
       from {opacity: 0;}
       to {opacity: 1;}
     }
+
     .note {
       font-size: 13px;
       color: #666;
       text-align: center;
       margin-top: 10px;
     }
+
     .resend-btn {
       background: #ff9800;
       margin-top: 10px;
     }
+
     .disabled {
       opacity: 0.6;
       cursor: not-allowed;
+    }
+
+    /* ✅ מובייל בלבד */
+    @media (max-width: 480px) {
+      body {
+        background: #e3f2fd; /* רקע פשוט יותר במובייל */
+      }
+      .container {
+        margin: 10px auto;
+        padding: 16px;
+      }
+      h2 {
+        font-size: 1.4em;
+      }
+      input, select, button {
+        font-size: 16px;
+      }
     }
   </style>
 </head>
