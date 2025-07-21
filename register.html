@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>רישום משתמש חדש</title>
-  <!-- ✅ Firebase v8 יציב -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -19,12 +18,14 @@
 
     .container {
       background: #fff;
-      width: 95%;         /* כמעט מלא במסכים קטנים */
+      width: 95%;
       max-width: 420px;
-      margin: 20px auto;  /* פחות מרווח עליון */
+      margin: 20px auto;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
     }
 
     h2 {
@@ -76,15 +77,15 @@
 
     .step {
       display: none;
-      animation: fadeIn 0.5s;
-    }
-    .step.active {
-      display: block;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
     }
 
-    @keyframes fadeIn {
-      from {opacity: 0;}
-      to {opacity: 1;}
+    .step.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
     }
 
     .note {
@@ -104,10 +105,9 @@
       cursor: not-allowed;
     }
 
-    /* ✅ מובייל בלבד */
     @media (max-width: 480px) {
       body {
-        background: #e3f2fd; /* רקע פשוט יותר במובייל */
+        background: #e3f2fd;
       }
       .container {
         margin: 10px auto;
@@ -126,13 +126,13 @@
   <div class="container">
     <h2 id="form-title">רישום משתמש חדש</h2>
 
-    <!-- שלב 1: פרטים אישיים -->
+    <!-- שלב 1 -->
     <div class="step active" id="step-1">
       <label>שם מלא:</label>
       <input type="text" id="name" placeholder="הקלד את שמך המלא">
 
       <label>מספר טלפון:</label>
-      <input type="tel" id="phone" placeholder="למשל 0555555555" inputmode="numeric">
+      <input type="tel" id="phone" placeholder="למשל 0556647360" inputmode="numeric">
 
       <label>בחר גף:</label>
       <select id="branch">
@@ -149,13 +149,12 @@
         <option value="מפקד">מפקד</option>
       </select>
 
-      <!-- ✅ כאן נטען reCAPTCHA -->
       <div id="recaptcha-container" style="margin:15px 0;"></div>
 
       <button onclick="sendSMS()">שלח קוד SMS</button>
     </div>
 
-    <!-- שלב 2: קוד SMS -->
+    <!-- שלב 2 -->
     <div class="step" id="step-2">
       <p style="text-align:center; font-weight:bold; color:#1976d2;">
         ✅ קוד נשלח לטלפון שלך.<br>הזן אותו כאן:
@@ -167,7 +166,7 @@
       <p id="timer" style="text-align:center; color:#999; margin-top:8px;"></p>
     </div>
 
-    <!-- שלב 3: התחברות עם Google -->
+    <!-- שלב 3 -->
     <div class="step" id="step-3">
       <p style="text-align:center; font-weight:bold; color:#1976d2;">
         ✅ מספר הטלפון אומת בהצלחה!<br>
@@ -180,7 +179,6 @@
   </div>
 
   <script>
-    // ✅ Firebase config שלך
     const firebaseConfig = {
       apiKey: "AIzaSyCQQS1iKvwoKI1kUVJ7ZKADNZRV6uSEp0k",
       authDomain: "shahad-attendence.firebaseapp.com",
@@ -203,9 +201,14 @@
       recaptchaVerifier.render();
     }
 
+    // ✅ מעבר חלק עם אנימציה
     function showStep(stepNumber) {
-      document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
-      document.getElementById(`step-${stepNumber}`).classList.add('active');
+      document.querySelectorAll('.step').forEach(step => {
+        step.classList.remove('active');
+      });
+
+      const nextStep = document.getElementById(`step-${stepNumber}`);
+      nextStep.classList.add('active');
     }
 
     function normalizePhone(phone) {
@@ -216,7 +219,6 @@
       return phone;
     }
 
-    // שליחת SMS
     async function sendSMS() {
       const rawPhone = document.getElementById("phone").value.trim();
       const phone = normalizePhone(rawPhone);
@@ -240,7 +242,6 @@
       }
     }
 
-    // התחלת טיימר 30 שניות
     function startResendTimer() {
       let timeLeft = 30;
       const resendBtn = document.getElementById("resendBtn");
@@ -266,7 +267,7 @@
 
     async function resendCode() {
       alert("מנסה לשלוח קוד חדש...");
-      sendSMS(); // שליחה חוזרת
+      sendSMS();
     }
 
     async function verifyCode() {
